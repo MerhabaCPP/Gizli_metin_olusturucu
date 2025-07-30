@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<!-- MIT License
+
+Copyright (c) 2024 J Denby [Text watermark & Stegonography toolkit][rabian.io][4uracom@gmail.com]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. -->
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Gizli Metin Damgalayıcı (TR)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex items-center justify-center p-4">
+<div class="w-full max-w-xl space-y-6">
+  <h1 class="text-3xl font-bold text-center text-sky-400">Gizli Metin Damgalayıcı (TR)</h1>
+
+  <!-- AÇIKLAMA -->
+  <div class="bg-slate-800 rounded-lg p-4 text-sm leading-relaxed">
+    <p>
+      Bu araç, görünen bir metnin sonuna <strong>görünmez karakterlerle</strong> gizli bir mesaj ekler.
+      Böylece e-posta, Discord, blog yazısı vb. yerlerde “gizli” iletişim kurabilirsiniz.
+      Twitter gibi platformlar bu karakterlere izin vermeyebilir, önce test edin.
+    </p>
+  </div>
+
+  <!-- KODLAMA -->
+  <form id="encodeForm" class="bg-slate-800 rounded-lg p-4 space-y-3">
+    <h2 class="text-lg font-semibold text-sky-300">1) Gizle</h2>
+    <label class="block">
+      <span class="text-sm">Görünür mesaj</span>
+      <textarea id="visible" class="w-full mt-1 p-2 rounded bg-slate-700 resize-none" rows="2" placeholder="Selam!"></textarea>
+    </label>
+    <label class="block">
+      <span class="text-sm">Gizli mesaj</span>
+      <textarea id="secret" class="w-full mt-1 p-2 rounded bg-slate-700 resize-none" rows="2" placeholder="Gizli bilgi"></textarea>
+    </label>
+    <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white py-2 rounded">
+      Birleştir & Kopyala
+    </button>
+    <textarea id="encoded" readonly class="w-full p-2 rounded bg-slate-700 text-sm" rows="2"></textarea>
+  </form>
+
+  <!-- ÇÖZME -->
+  <div class="bg-slate-800 rounded-lg p-4 space-y-3">
+    <h2 class="text-lg font-semibold text-sky-300">2) Çöz</h2>
+    <label class="block">
+      <span class="text-sm">Gelen metni yapıştır</span>
+      <textarea id="incoming" class="w-full mt-1 p-2 rounded bg-slate-700 resize-none" rows="3"></textarea>
+    </label>
+    <button id="decodeBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded">
+      Çöz
+    </button>
+    <textarea id="decoded" readonly class="w-full p-2 rounded bg-slate-700 text-sm" rows="2"></textarea>
+  </div>
+
+  <footer class="text-center text-xs text-slate-500">© 2024 – MIT lisansı</footer>
+</div>
+
+<script>
+/* ---------- TR karakter düzeltme ---------- */
+const trMap = {
+  'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u',
+  'Ç':'C','Ğ':'G','İ':'I','Ö':'O','Ş':'S','Ü':'U'
+};
+const normalizeTR = str => [...str].map(ch => trMap[ch] || ch).join('');
+
+/* ---------- GİZLİ KARAKTERLER ---------- */
+const DELIM = '\u2060';
+const MAP = {
+  '0':'\u206C','1':'\u00AD','2':'\u200E','3':'\u2068','4':'\u202C',
+  '5':'\u2069','6':'\u206A','7':'\u200B','8':'\u200C','9':'\u200D',
+  'a':'\u206D','b':'\u206F','c':'\u2062','d':'\u2063','e':'\u2064','f':'\u206E'
+};
+
+const asciiToHex = str => [...normalizeTR(str)].map(ch => ch.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+const hexToAscii = hex => String.fromCharCode(parseInt(hex,16));
+
+function encodeText(visible, secret) {
+  const hex = asciiToHex(secret);
+  const encoded = [...hex].map(c => MAP[c] || '').join('') + DELIM;
+  return visible + encoded;
+}
+
+function decodeText(text) {
+  const chars = [...text].filter(ch => Object.values(MAP).includes(ch) || ch === DELIM);
+  let hex = '';
+  for (const ch of chars) {
+    if (ch === DELIM) continue;
+    const key = Object.keys(MAP).find(k => MAP[k] === ch);
+    if (key) hex += key;
+  }
+  if (!hex) return '';
+  return hex.match(/.{1,2}/g)?.map(hexToAscii).join('') || '';
+}
+
+/* ---------- OLAYLAR ---------- */
+document.getElementById('encodeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = document.getElementById('visible').value.trim();
+  const s = document.getElementById('secret').value.trim();
+  if (!v || !s) return alert('Lütfen iki alanı da doldurun!');
+  const encoded = encodeText(v, s);
+  document.getElementById('encoded').value = encoded;
+  navigator.clipboard.writeText(encoded).then(() => alert('Kopyalandı!'));
+});
+
+document.getElementById('decodeBtn').addEventListener('click', () => {
+  const incoming = document.getElementById('incoming').value;
+  document.getElementById('decoded').value = decodeText(incoming);
+});
+</script>
+</body>
+</html>
